@@ -1,6 +1,6 @@
 import unittest
 
-from htmlnode import HTMLNode, LeafNode
+from htmlnode import HTMLNode, LeafNode, ParentNode
 
 
 class TestHTMLNode(unittest.TestCase):
@@ -46,6 +46,60 @@ class TestHTMLNode(unittest.TestCase):
             node5.to_html(),
             '<a href="https://boot.dev" target="_blank">Double props</a>',
         )
+
+    def test_to_html_with_children(self):
+        child_node = LeafNode("span", "child")
+        parent_node = ParentNode("div", [child_node])
+        self.assertEqual(parent_node.to_html(), "<div><span>child</span></div>")
+
+        child_node2 = LeafNode(
+            "body", "Website", {"href": "https://boot.dev", "target": "_blank"}
+        )
+        parent_node2 = ParentNode("head", [child_node2])
+        self.assertEqual(
+            parent_node2.to_html(),
+            '<head><body href="https://boot.dev" target="_blank">Website</body></head>',
+        )
+
+    def test_to_html_with_grandchildren(self):
+        grandchild_node = LeafNode("b", "grandchild")
+        child_node = ParentNode("span", [grandchild_node])
+        parent_node = ParentNode("div", [child_node])
+        self.assertEqual(
+            parent_node.to_html(),
+            "<div><span><b>grandchild</b></span></div>",
+        )
+
+    def test_to_html_with_parent_props(self):
+        child_node = LeafNode("body", "Website")
+        parent_node = ParentNode(
+            "head", [child_node], {"href": "https://boot.dev", "target": "_blank"}
+        )
+        self.assertEqual(
+            parent_node.to_html(),
+            '<head href="https://boot.dev" target="_blank"><body>Website</body></head>',
+        )
+
+    def test_to_html_with_parents_and_child_props(self):
+        child_node = ParentNode("span", [LeafNode(None, "hi")], {"class": "inner"})
+        parent_node = ParentNode("div", [child_node], {"id": "outer"})
+        self.assertEqual(
+            parent_node.to_html(), '<div id="outer"><span class="inner">hi</span></div>'
+        )
+
+    def test_to_html_tagless_parent(self):
+        parent_node = ParentNode(None, [LeafNode("span", "x")])
+        with self.assertRaises(ValueError):
+            parent_node.to_html()
+
+    def test_to_html_missing_children(self):
+        parent_node = ParentNode("div", None)
+        with self.assertRaises(ValueError):
+            parent_node.to_html()
+
+        parent_node2 = ParentNode("div", [])
+        with self.assertRaises(ValueError):
+            parent_node2.to_html()
 
 
 if __name__ == "__main__":
