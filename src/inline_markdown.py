@@ -11,7 +11,7 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
         else:
             parts = node.text.split(delimiter)
             if len(parts) % 2 == 0:
-                raise Exception("invalid markdown, missing closing delimiter")
+                raise ValueError("invalid markdown, missing closing delimiter")
             for i, part in enumerate(parts):
                 if part == "":
                     continue
@@ -78,3 +78,13 @@ def split_nodes_link(old_nodes):
         if current_text:
             new_nodes.append(TextNode(current_text, TextType.TEXT))
     return new_nodes
+
+
+def text_to_textnodes(text):
+    new_text = [TextNode(text, TextType.TEXT)]
+    new_text = split_nodes_delimiter(new_text, "**", TextType.BOLD)
+    new_text = split_nodes_delimiter(new_text, "_", TextType.ITALIC)
+    new_text = split_nodes_delimiter(new_text, "`", TextType.CODE)
+    new_text = split_nodes_link(new_text)
+    new_text = split_nodes_image(new_text)
+    return new_text

@@ -6,6 +6,7 @@ from inline_markdown import (
     split_nodes_delimiter,
     split_nodes_image,
     split_nodes_link,
+    text_to_textnodes,
 )
 from textnode import TextNode, TextType
 
@@ -209,6 +210,50 @@ class TestSplitNode(unittest.TestCase):
         node = TextNode("![image](https://i.imgur.com/zjjcJKZ.png)", TextType.IMAGE)
         new_nodes = split_nodes_image([node])
         self.assertListEqual([node], new_nodes)
+
+    def test_text_to_textnodes(self):
+        text = "This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+        new_nodes = text_to_textnodes(text)
+        self.assertListEqual(
+            [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" word and a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" and an ", TextType.TEXT),
+                TextNode(
+                    "obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"
+                ),
+                TextNode(" and a ", TextType.TEXT),
+                TextNode("link", TextType.LINK, "https://boot.dev"),
+            ],
+            new_nodes,
+        )
+
+    def test_plaintext_to_textnode(self):
+        text = "Just some plain text."
+        new_nodes = text_to_textnodes(text)
+        self.assertListEqual(
+            [TextNode("Just some plain text.", TextType.TEXT)], new_nodes
+        )
+
+    def test_weirdtext_to_textnode(self):
+        text = "weird **** case"
+        new_nodes = text_to_textnodes(text)
+        self.assertListEqual(
+            [
+                TextNode("weird ", TextType.TEXT),
+                TextNode(" case", TextType.TEXT),
+            ],
+            new_nodes,
+        )
+
+    def test_missing_delimiter_to_textnode(self):
+        text = "This is **broken"
+        with self.assertRaises(ValueError):
+            text_to_textnodes(text)
 
 
 if __name__ == "__main__":
