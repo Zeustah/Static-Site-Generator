@@ -4,6 +4,8 @@ from inline_markdown import (
     extract_markdown_images,
     extract_markdown_links,
     split_nodes_delimiter,
+    split_nodes_image,
+    split_nodes_link,
 )
 from textnode import TextNode, TextType
 
@@ -138,6 +140,75 @@ class TestSplitNode(unittest.TestCase):
             "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png)"
         )
         self.assertListEqual([], matches)
+
+    def test_split_images(self):
+        node = TextNode(
+            "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png) and another ![second image](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("This is text with an ", TextType.TEXT),
+                TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
+                TextNode(" and another ", TextType.TEXT),
+                TextNode(
+                    "second image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                ),
+            ],
+            new_nodes,
+        )
+
+    def test_split_links(self):
+        node = TextNode(
+            "This is text with a link to [bootdev](https://www.boot.dev) and another link to [google](https://www.google.com)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_link([node])
+        self.assertListEqual(
+            [
+                TextNode("This is text with a link to ", TextType.TEXT),
+                TextNode("bootdev", TextType.LINK, "https://www.boot.dev"),
+                TextNode(" and another link to ", TextType.TEXT),
+                TextNode("google", TextType.LINK, "https://www.google.com"),
+            ],
+            new_nodes,
+        )
+
+    def test_split_links_missing(self):
+        node = TextNode("This is a text that does not have a link", TextType.TEXT)
+        new_nodes = split_nodes_link([node])
+        self.assertListEqual(
+            [TextNode("This is a text that does not have a link", TextType.TEXT)],
+            new_nodes,
+        )
+
+    def test_split_images_missing(self):
+        node = TextNode("This is a text that does not have an image", TextType.TEXT)
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [TextNode("This is a text that does not have an image", TextType.TEXT)],
+            new_nodes,
+        )
+
+    def test_split_links_start(self):
+        node = TextNode(
+            "[bootdev](https://www.boot.dev) there is a boot.dev link in here somewhere",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_link([node])
+        self.assertListEqual(
+            [
+                TextNode("bootdev", TextType.LINK, "https://www.boot.dev"),
+                TextNode(" there is a boot.dev link in here somewhere", TextType.TEXT),
+            ],
+            new_nodes,
+        )
+
+    def test_split_images_only(self):
+        node = TextNode("![image](https://i.imgur.com/zjjcJKZ.png)", TextType.IMAGE)
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual([node], new_nodes)
 
 
 if __name__ == "__main__":
