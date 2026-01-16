@@ -3,6 +3,7 @@ import unittest
 from inline_markdown import (
     extract_markdown_images,
     extract_markdown_links,
+    markdown_to_blocks,
     split_nodes_delimiter,
     split_nodes_image,
     split_nodes_link,
@@ -254,6 +255,93 @@ class TestSplitNode(unittest.TestCase):
         text = "This is **broken"
         with self.assertRaises(ValueError):
             text_to_textnodes(text)
+
+    def test_markdown_to_blocks(self):
+        md = """
+This is **bolded** paragraph
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph",
+                "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list\n- with items",
+            ],
+        )
+
+    def test_paragraph_to_blocks(self):
+        md = "Just a single block."
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(blocks, ["Just a single block."])
+
+    def test_markdown_to_blocks_extra_blanks(self):
+        md = """
+This is **bolded** paragraph
+
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+
+
+- This is a list
+
+- with items
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph",
+                "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list",
+                "- with items",
+            ],
+        )
+
+    def test_markdown_to_blocks_no_spaces(self):
+        md = """
+This is **bolded** paragraph
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+- This is a list
+- with items
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph\nThis is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line\n- This is a list\n- with items"
+            ],
+        )
+
+    def test_markdown_to_blocks_leading_cases(self):
+        md = """
+
+This is **bolded** paragraph
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+
+
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph\nThis is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list\n- with items",
+            ],
+        )
 
 
 if __name__ == "__main__":
