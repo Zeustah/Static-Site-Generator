@@ -1,7 +1,8 @@
 import re
 from enum import Enum
 
-from textnode import TextNode, TextType
+from htmlnode import HTMLNode
+from textnode import TextNode, TextType, text_node_to_html_node
 
 
 def split_nodes_delimiter(old_nodes, delimiter, text_type):
@@ -124,12 +125,11 @@ def block_to_block_type(block):
         return BlockType.HEADING
 
     # Code
-    if (
-        len(strings) > 1
-        and strings[0].startswith("```")
-        and strings[-1].startswith("```")
-    ):
-        return BlockType.CODE
+    if len(strings) > 1:
+        first = strings[0].strip()
+        last = strings[-1].strip()
+        if first.startswith("```") and last.startswith("```"):
+            return BlockType.CODE
 
     # Quote
     is_quote = True
@@ -143,7 +143,7 @@ def block_to_block_type(block):
     # Unordered
     is_unord = True
     for s in strings:
-        if not s.startswith("- "):
+        if not s.lstrip().startswith("- "):
             is_unord = False
             break
     if is_unord:
@@ -153,10 +153,103 @@ def block_to_block_type(block):
     num = 1
     is_ord = True
     for s in strings:
-        if not s.startswith(f"{num}. "):
+        if not s.lstrip().startswith(f"{num}. "):
             is_ord = False
             break
         num += 1
     if is_ord:
         return BlockType.ORD_LIST
     return BlockType.PARAGRAPH
+
+
+def text_to_children(text):
+    text_nodes = text_to_textnodes(text)
+    children = []
+    for node in text_nodes:
+        children.append(text_node_to_html_node(node))
+    return children
+
+
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    children = []
+    for block in blocks:
+        blocktype = block_to_block_type(block)
+
+        # Header
+        if blocktype == BlockType.HEADING:
+            hashcount = 0
+            for b in block:
+                if b == "#":
+                    hashcount += 1
+                else:
+                    break
+            heading_text = block[hashcount:].strip()
+            inline_nodes = text_to_children(heading_text)
+            header_node = HTMLNode(f"h{hashcount}", children=inline_nodes)
+            children.append(header_node)
+
+        # Code
+        elif blocktype == BlockType.CODE:
+            lines = block.split("\n")
+            inner_lines = lines[1:-1]
+            stripped_inner = [line.lstrip() for line in inner_lines]
+            code_text = "\n".join(stripped_inner) + "\n"
+            text_node = TextNode(code_text, TextType.CODE)
+            code_child = text_node_to_html_node(text_node)
+            pre_node = HTMLNode("pre", children=[code_child])
+            children.append(pre_node)
+
+        # Paragraph
+        elif blocktype == BlockType.PARAGRAPH:
+            paragraph_text = block.replace("\n", " ")
+            paragraph_text = " ".join(paragraph_text.split())
+            inline_nodes = text_to_children(paragraph_text)
+            paragraph_node = HTMLNode("p", children=inline_nodes)
+            children.append(paragraph_node)
+
+        # Quote
+        elif blocktype == BlockType.QUOTE:
+            lines = block.split("\n")
+            cleaned_lines = []
+            for line in lines:
+                line = line.lstrip()
+                if line.startswith(">"):
+                    cleaned_lines.append(line[1:].lstrip())
+            quote_text = " ".join(cleaned_lines)
+            inline_nodes = text_to_children(quote_text)
+            quote_node = HTMLNode("blockquote", children=inline_nodes)
+            children.append(quote_node)
+
+        # Unordered List
+        elif blocktype == BlockType.UNORD_LIST:
+            lines = block.split("\n")
+            li_nodes = []
+            for line in lines:
+                line = line.lstrip()
+                if line.startswith("- "):
+                    item_text = line[2:]
+                    inline_children = text_to_children(item_text)
+                    li_node = HTMLNode("li", children=inline_children)
+                    li_nodes.append(li_node)
+            unord_node = HTMLNode("ul", children=li_nodes)
+            children.append(unord_node)
+
+        # Ordered List
+        elif blocktype == BlockType.ORD_LIST:
+            lines = block.split("\n")
+            li_nodes = []
+            num = 1
+            for line in lines:
+                line = line.lstrip()
+                prefix = f"{num}. "
+                if line.startswith(prefix):
+                    item_text = line[len(prefix) :]
+                    inline_children = text_to_children(item_text)
+                    li_node = HTMLNode("li", children=inline_children)
+                    li_nodes.append(li_node)
+                    num += 1
+            ord_node = HTMLNode("ol", children=li_nodes)
+            children.append(ord_node)
+
+    return HTMLNode("div", children=children)

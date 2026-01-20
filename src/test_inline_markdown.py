@@ -6,9 +6,11 @@ from inline_markdown import (
     extract_markdown_images,
     extract_markdown_links,
     markdown_to_blocks,
+    markdown_to_html_node,
     split_nodes_delimiter,
     split_nodes_image,
     split_nodes_link,
+    text_to_children,
     text_to_textnodes,
 )
 from textnode import TextNode, TextType
@@ -402,6 +404,123 @@ This is the same paragraph on a new line
     def test_not_unordered_list_missing_space(self):
         block = "-not a list item"
         assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_paragraphs(self):
+        md = """
+    This is **bolded** paragraph
+    text in a p
+    tag here
+
+    This is another paragraph with _italic_ text and `code` here
+
+    """
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><p>This is <b>bolded</b> paragraph text in a p tag here</p><p>This is another paragraph with <i>italic</i> text and <code>code</code> here</p></div>",
+        )
+
+    def test_codeblock(self):
+        md = """
+    ```
+    This is text that _should_ remain
+    the **same** even with inline stuff
+    ```
+    """
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><pre><code>This is text that _should_ remain\nthe **same** even with inline stuff\n</code></pre></div>",
+        )
+
+    def test_header_unord_list(self):
+        md = """
+    ## Shopping
+
+    - Apples
+    - _Bananas_
+    - **Carrots**
+    """
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><h2>Shopping</h2><ul><li>Apples</li><li><i>Bananas</i></li><li><b>Carrots</b></li></ul></div>",
+        )
+
+    def test_mixed_basic(self):
+        md = """
+    # Title
+
+    This is a _paragraph_ with **bold** and `code`.
+
+    ```
+    raw _code_ **here**
+    ```
+    """
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><h1>Title</h1><p>This is a <i>paragraph</i> with <b>bold</b> and <code>code</code>.</p><pre><code>raw _code_ **here**\n</code></pre></div>",
+        )
+
+    def test_quote_with_inline(self):
+        md = """
+    > This is a _fancy_ **quote**
+    """
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        assert html == (
+            "<div><blockquote>This is a <i>fancy</i> <b>quote</b></blockquote></div>"
+        )
+
+    def test_paragraph_and_unordered_list(self):
+        md = """
+    Shopping list:
+
+    - Apples
+    - _Bananas_
+    - **Carrots**
+    """
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        assert html == (
+            "<div>"
+            "<p>Shopping list:</p>"
+            "<ul>"
+            "<li>Apples</li>"
+            "<li><i>Bananas</i></li>"
+            "<li><b>Carrots</b></li>"
+            "</ul>"
+            "</div>"
+        )
+
+    def test_ordered_md(self):
+        md = """
+    Steps:
+
+    1. Do _this_
+    2. Then **that**
+    3. Finally `code`
+    """
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        assert html == (
+            "<div>"
+            "<p>Steps:</p>"
+            "<ol>"
+            "<li>Do <i>this</i></li>"
+            "<li>Then <b>that</b></li>"
+            "<li>Finally <code>code</code></li>"
+            "</ol>"
+            "</div>"
+        )
 
 
 if __name__ == "__main__":

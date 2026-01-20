@@ -6,7 +6,13 @@ class HTMLNode:
         self.props = props
 
     def to_html(self):
-        raise NotImplementedError
+        if self.tag is None:
+            return self.value or ""
+        props_str = self.props_to_html()
+        if self.children is None or len(self.children) == 0:
+            return f"<{self.tag}{props_str}>{self.value or ''}</{self.tag}>"
+        inner_html = "".join(child.to_html() for child in self.children)
+        return f"<{self.tag}{props_str}>{inner_html}</{self.tag}>"
 
     def props_to_html(self):
         prop = ""
