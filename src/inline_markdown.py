@@ -1,4 +1,5 @@
 import re
+from enum import Enum
 
 from textnode import TextNode, TextType
 
@@ -98,3 +99,64 @@ def markdown_to_blocks(markdown):
         if stripped != "":
             new_blocks.append(stripped)
     return new_blocks
+
+
+class BlockType(Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    CODE = "code"
+    QUOTE = "quote"
+    UNORD_LIST = "unordered_list"
+    ORD_LIST = "ordered_list"
+
+
+def block_to_block_type(block):
+    strings = block.split("\n")
+    # Header
+    if (
+        block.startswith("# ")
+        or block.startswith("## ")
+        or block.startswith("### ")
+        or block.startswith("#### ")
+        or block.startswith("##### ")
+        or block.startswith("###### ")
+    ):
+        return BlockType.HEADING
+
+    # Code
+    if (
+        len(strings) > 1
+        and strings[0].startswith("```")
+        and strings[-1].startswith("```")
+    ):
+        return BlockType.CODE
+
+    # Quote
+    is_quote = True
+    for s in strings:
+        if not s.startswith("> "):
+            is_quote = False
+            break
+    if is_quote:
+        return BlockType.QUOTE
+
+    # Unordered
+    is_unord = True
+    for s in strings:
+        if not s.startswith("- "):
+            is_unord = False
+            break
+    if is_unord:
+        return BlockType.UNORD_LIST
+
+    # Ordered
+    num = 1
+    is_ord = True
+    for s in strings:
+        if not s.startswith(f"{num}. "):
+            is_ord = False
+            break
+        num += 1
+    if is_ord:
+        return BlockType.ORD_LIST
+    return BlockType.PARAGRAPH

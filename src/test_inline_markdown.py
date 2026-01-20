@@ -1,6 +1,8 @@
 import unittest
 
 from inline_markdown import (
+    BlockType,
+    block_to_block_type,
     extract_markdown_images,
     extract_markdown_links,
     markdown_to_blocks,
@@ -342,6 +344,64 @@ This is the same paragraph on a new line
                 "- This is a list\n- with items",
             ],
         )
+
+    def test_paragraph_block(self):
+        block = "This is just a normal paragraph."
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_heading_levels(self):
+        for i in range(1, 7):
+            hashes = "#" * i
+            block = f"{hashes} Heading level {i}"
+            assert block_to_block_type(block) == BlockType.HEADING
+
+    def test_code_block(self):
+        block = "```\nprint('hello')\n```"
+        assert block_to_block_type(block) == BlockType.CODE
+
+    def test_not_code_single_line_backticks(self):
+        block = "``` not really code ```"
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_quote_single_line(self):
+        block = "> quoted text"
+        assert block_to_block_type(block) == BlockType.QUOTE
+
+    def test_quote_multi_line(self):
+        block = "> line one\n> line two\n> line three"
+        assert block_to_block_type(block) == BlockType.QUOTE
+
+    def test_quote_invalid_mixed(self):
+        block = "> good line\nbad line"
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_unordered_list(self):
+        block = "- item one\n- item two\n- item three"
+        assert block_to_block_type(block) == BlockType.UNORD_LIST
+
+    def test_unordered_list_invalid_mixed(self):
+        block = "- item one\nnot a list item"
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_ordered_list(self):
+        block = "1. first\n2. second\n3. third"
+        assert block_to_block_type(block) == BlockType.ORD_LIST
+
+    def test_ordered_list_wrong_start_number(self):
+        block = "2. first\n3. second"
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_ordered_list_wrong_increment(self):
+        block = "1. first\n3. second"
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_not_heading_missing_space(self):
+        block = "#Not a heading"
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
+
+    def test_not_unordered_list_missing_space(self):
+        block = "-not a list item"
+        assert block_to_block_type(block) == BlockType.PARAGRAPH
 
 
 if __name__ == "__main__":
