@@ -5,12 +5,12 @@ from inline_markdown import (
     block_to_block_type,
     extract_markdown_images,
     extract_markdown_links,
+    extract_title,
     markdown_to_blocks,
     markdown_to_html_node,
     split_nodes_delimiter,
     split_nodes_image,
     split_nodes_link,
-    text_to_children,
     text_to_textnodes,
 )
 from textnode import TextNode, TextType
@@ -521,6 +521,29 @@ This is the same paragraph on a new line
             "</ol>"
             "</div>"
         )
+
+    def test_extract_title(self):
+        md = "# Hello"
+        result = extract_title(md)
+        assert result == "Hello"
+
+    def test_extract_title_multiple(self):
+        md = "### Hello"
+        with self.assertRaises(Exception):
+            extract_title(md)
+
+    def test_extract_title_multi_lines(self):
+        md = """
+    # Title
+
+    This is a _paragraph_ with **bold** and `code`.
+
+    ```
+    raw _code_ **here**
+    ```
+    """
+        result = extract_title(md)
+        assert result == "Title"
 
 
 if __name__ == "__main__":

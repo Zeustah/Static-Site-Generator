@@ -253,3 +253,13 @@ def markdown_to_html_node(markdown):
             children.append(ord_node)
 
     return HTMLNode("div", children=children)
+
+
+def extract_title(markdown):
+    blocks = markdown_to_blocks(markdown)
+    for block in blocks:
+        if block.startswith("# "):
+            header = block.strip("# ")
+            return header
+        else:
+            raise Exception("h1 header not found")
